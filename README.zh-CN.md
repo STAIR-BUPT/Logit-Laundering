@@ -1,8 +1,8 @@
 # Logit Laundering: Evading Data-Use Auditing in Large Language Models
 
-本仓库为 [Logit Laundering: Evading Data-Use Auditing in Large Language Models](‼️PAPER_URL)（ACM CCS 2026）的官方实现，作者：Ruihan Hu, Wei Luo, Yu-Ming Shang, Jiakai Wang, Chuxuan Zhang, Mei Li, Xi Zhang, Meikang Qiu。
+本仓库为 Logit Laundering: Evading Data-Use Auditing in Large Language Models（ACM CCS 2026）的官方实现，作者：Ruihan Hu, Wei Luo, Yu-Ming Shang, Jiakai Wang, Chuxuan Zhang, Mei Li, Xi Zhang, Meikang Qiu。
 
-[项目主页](docs/index.html) | [Paper](‼️PAPER_URL) | [English](README.md)
+[项目主页](docs/index.html) | [English](README.md)
 
 ## Overview
 
@@ -11,17 +11,6 @@
 我们提出 **Logit Laundering**，一种 **model-level** 规避框架。与训练前破坏语料的数据级规避不同，轻量 **Statistical Bias Extractor (SBE)** 在推理阶段修正 next-token logits，在 Jensen–Shannon 散度预算下削弱 STAMP/Radioactive 可见的水印统计信号，且无需重训 base model。图表与完整结果见[项目主页](docs/index.html)。
 
 每步解码：$z_t^{\mathrm{Bob}} = z_t^{\mathrm{base}} - \lambda_t \, z_t^{\mathrm{SBE}}$，其中 $\lambda_t$ 由 base model 的 top-1/top-2 logit margin 自适应确定。
-
-:star: 如果本工作对您有帮助，欢迎引用 :star:
-
-```bibtex
-@inproceedings{hu2026logitlaundering,
-  title={Logit Laundering: Evading Data-Use Auditing in Large Language Models},
-  author={Hu, Ruihan and Luo, Wei and Shang, Yu-Ming and Wang, Jiakai and Zhang, Chuxuan and Li, Mei and Zhang, Xi and Qiu, Meikang},
-  booktitle={Proceedings of the ACM Conference on Computer and Communications Security (CCS)},
-  year={2026}
-}
-```
 
 ## 📘 Data
 

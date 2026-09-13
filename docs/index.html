@@ -36,7 +36,6 @@
     </div>
 
     <div class="hero-buttons">
-      <a class="hero-btn" href="‼️PAPER_URL">Paper</a>
       <a class="hero-btn" href="https://github.com/STAIR-BUPT/Logit-Laundering" target="_blank" rel="noopener">Code</a>
       <a class="hero-btn" href="https://github.com/STAIR-BUPT/Logit-Laundering#readme" target="_blank" rel="noopener">Docs</a>
     </div>
@@ -246,17 +245,6 @@
       </p>
     </section>
 
-    <section id="bibtex">
-      <h2>BibTeX</h2>
-      <pre class="bibtex-block" id="bibtex-content">@inproceedings{hu2026logitlaundering,
-  title={Logit Laundering: Evading Data-Use Auditing in Large Language Models},
-  author={Hu, Ruihan and Luo, Wei and Shang, Yu-Ming and Wang, Jiakai and Zhang, Chuxuan and Li, Mei and Zhang, Xi and Qiu, Meikang},
-  booktitle={Proceedings of the ACM Conference on Computer and Communications Security (CCS)},
-  year={2026}
-}</pre>
-      <button class="copy-btn" type="button" onclick="copyBibtex()">Copy</button>
-    </section>
-
   </main>
 
   <footer>
@@ -265,17 +253,6 @@
   </footer>
 
 </div>
-
-<script>
-function copyBibtex() {
-  const text = document.getElementById('bibtex-content').innerText;
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.querySelector('.copy-btn');
-    btn.textContent = 'Copied!';
-    setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
-  });
-}
-</script>
 
 </body>
 </html>
