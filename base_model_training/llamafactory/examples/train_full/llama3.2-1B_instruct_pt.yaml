@@ -1,0 +1,54 @@
+### model
+model_name_or_path: ${MODEL_ROOT}/Llama-3.2-1B-Instruct
+trust_remote_code: true
+
+### method
+stage: pt
+do_train: true
+finetuning_type: full
+
+### dataset
+dataset: authorized_wm_corpus
+template: llama3
+cutoff_len: 1024
+packing: false
+max_samples: null
+overwrite_cache: true
+preprocessing_num_workers: 1
+dataloader_num_workers: 0
+val_size: 0.0
+remove_unused_columns: false
+
+### output
+output_dir: ${OUTPUT_MODEL_ROOT}/Llama-3.2-1B-Instruct_pt
+overwrite_output_dir: true
+save_only_model: false
+save_steps: 50
+save_total_limit: 2
+ignore_data_skip: true
+
+### train
+num_train_epochs: 1
+per_device_train_batch_size: 8
+gradient_accumulation_steps: 8
+learning_rate: 2.0e-6
+lr_scheduler_type: cosine
+warmup_ratio: 0.03
+weight_decay: 0.01
+
+max_grad_norm: 1.0
+optim: adamw_torch
+seed: 42
+
+### precision
+bf16: true
+dataloader_pin_memory: true
+
+### logging
+logging_steps: 1
+report_to: none
+disable_tqdm: false
+plot_loss: true
+
+### eval / predict
+predict_with_generate: false

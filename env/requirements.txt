@@ -1,0 +1,16 @@
+numpy
+pandas
+tqdm
+torch
+transformers
+datasets
+scipy
+nltk
+textattack
+Levenshtein
+rouge-score
+language-tool-python
+pyinflect
+openai
+tenacity
+pyyaml

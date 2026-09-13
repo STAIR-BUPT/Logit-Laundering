@@ -1,0 +1,11 @@
+{
+  "authorized_wm_corpus": {
+    "file_name": "authorized_wm_corpus.jsonl",
+    "columns": {
+      "prompt": "text"
+    }
+  },
+  "authorized_sft_qa": {
+    "file_name": "authorized_sft_qa.json"
+  }
+}

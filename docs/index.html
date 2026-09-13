@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Logit Laundering: a model-level evasion framework against LLM data-use auditing—suppresses auditor-visible watermark signals at inference while preserving utility.">
+  <title>Logit Laundering: Evading Data-Use Auditing in LLMs</title>
+  <link rel="stylesheet" href="static/css/style.css?v=5">
+</head>
+<body>
+
+<div class="page">
+
+  <!-- Hero: title/authors centered; pitch + figure align with main column -->
+  <header class="hero">
+    <div class="hero-meta">
+    <h1><span class="title-emoji" aria-hidden="true">🦊</span> Logit Laundering: Evading Data-Use Auditing in Large Language Models</h1>
+
+    <p class="authors">
+      <span class="author aff1">Ruihan Hu<sup>*</sup></span>,
+      <span class="author aff1">Wei Luo<sup>*</sup></span>,
+      <span class="author aff1">Yu-Ming Shang</span>,
+      <span class="author aff2">Jiakai Wang</span>,
+      <span class="author aff1">Chuxuan Zhang</span>,
+      <span class="author aff1">Mei Li</span>,
+      <span class="author aff1">Xi Zhang<sup>†</sup></span>,
+      <span class="author aff3">Meikang Qiu</span>
+    </p>
+
+    <div class="affiliations">
+      <div class="aff-row"><span class="aff-marker aff1">▶</span> Beijing University of Posts and Telecommunications</div>
+      <div class="aff-row"><span class="aff-marker aff2">▶</span> Zhongguancun Laboratory</div>
+      <div class="aff-row"><span class="aff-marker aff3">▶</span> Augusta University</div>
+      <div class="aff-row aff-eq"><sup>*</sup>Equal contribution &nbsp; <sup>†</sup>Corresponding author —
+        <a href="mailto:zhangx@bupt.edu.cn">zhangx@bupt.edu.cn</a></div>
+    </div>
+
+    <div class="hero-buttons">
+      <!-- ‼️ 公开前替换：‼️PAPER_URL → arXiv/PDF；‼️YOUR_ORG → GitHub 用户名或组织 -->
+      <a class="hero-btn" href="‼️PAPER_URL">Paper</a>
+      <a class="hero-btn" href="https://github.com/‼️YOUR_ORG/Logit-Laundering-Public" target="_blank" rel="noopener">Code</a>
+      <a class="hero-btn" href="https://github.com/‼️YOUR_ORG/Logit-Laundering-Public#readme" target="_blank" rel="noopener">Docs</a>
+    </div>
+    </div>
+
+    <p class="pitch">
+      <strong>Data-use auditing</strong> detects whether data was used in training; watermarking dominates.
+      Providers may still evade after training on unauthorized copyrighted text.
+    </p>
+
+    <figure class="content-figure">
+      <div class="figure-frame">
+        <img src="static/img/fig01.png" alt="Watermark-based data-use auditing and evasion behaviors">
+      </div>
+      <figcaption><strong>Figure 1.</strong> (a) Watermark-based auditing. (b) <strong>Data-level</strong> evasion corrupts corpora; <strong>model-level</strong> Logit Laundering suppresses signals at inference.</figcaption>
+    </figure>
+
+    <p class="pitch">
+      <strong>Data-level</strong> evasion degrades corpora; <strong>model-level</strong> evasion suppresses
+      audit signals at inference via a lightweight <strong>SBE</strong>.
+      <strong>Logit Laundering</strong> weakens STAMP, Radioactive, Top-1, and related auditors while preserving knowledge and generation quality.
+    </p>
+
+    <figure class="content-figure">
+      <div class="figure-frame">
+        <img src="static/img/fig04.png" alt="Logit Laundering method overview">
+      </div>
+      <figcaption><strong>Figure 4.</strong> SBE training, inference-time logit reshaping, JS-budget scaling.</figcaption>
+    </figure>
+
+    <ul class="contrib hero-contrib">
+      <li><strong>Motivation.</strong> Data-level attacks harm corpus quality and leave residual signals—motivating model-level evasion.</li>
+      <li><strong>Method.</strong> Inference-time logit reshaping suppresses watermark statistics without retraining or corrupting corpora (<a href="#method">Method</a>).</li>
+      <li><strong>Findings.</strong> Five models, multiple auditors: p-values rise to non-significance with knowledge and quality largely retained (<a href="#results">Results</a>).</li>
+    </ul>
+  </header>
+
+  <main>
+
+    <section id="method">
+      <h2>Method</h2>
+      <p>
+        Data-level attacks degrade text quality; model-level baselines like Rank-Swap still leave
+        STAMP/Radioactive-visible signals. Logit Laundering reshapes logits at inference to suppress
+        watermark-induced bias.
+      </p>
+      <p>At each decoding step, logits are reshaped as</p>
+      <div class="formula">z<sub>t</sub><sup>Bob</sup> = z<sub>t</sub><sup>base</sup> − λ<sub>t</sub> · z<sub>t</sub><sup>SBE</sup></div>
+      <p><strong>Pipeline:</strong></p>
+      <ol class="steps">
+        <li><strong>Continual pretraining.</strong> Base model on public <em>D</em><sub>pub</sub> + watermarked copyrighted <em>D</em><sub>wm</sub>.</li>
+        <li><strong>Train SBE.</strong> Fit watermark bias on <em>D</em><sub>wm</sub> (ℒ<sub>fit</sub>); flatten unrelated bias on <em>D</em><sub>pub</sub> (ℒ<sub>flat</sub>).</li>
+        <li><strong>Inference.</strong> Subtract scaled SBE logits; λ<sub>t</sub> from top-1/top-2 margin under a JS budget.</li>
+      </ol>
+      <p>Higher-confidence steps allow stronger suppression; JS budget caps drift from the base distribution.</p>
+      <p class="method-note">The steps above summarize the paper pipeline. For the full reproduction workflow (<code>watermark</code> → <code>train-base</code> → SBE training → <code>calibrate</code> → auditing &amp; evaluation), see the <a href="https://github.com/‼️YOUR_ORG/Logit-Laundering-Public/blob/main/README.md">README</a>.</p>
+
+      <figure class="content-figure">
+        <div class="figure-frame">
+          <img src="static/img/fig05.png" alt="Logit reshaping example on public and watermarked prefixes">
+        </div>
+        <figcaption><strong>Figure 5.</strong> <em>D</em><sub>pub</sub>: minimal change; <em>D</em><sub>wm</sub>: watermark bias suppressed.</figcaption>
+      </figure>
+    </section>
+
+    <section id="results">
+      <h2>Results</h2>
+      <p>
+        Five foundation models (LLaMA-3.2, Qwen2.5, Gemma-2, StableLM-2), mixed public + watermarked book pretraining.
+        Auditors: STAMP, Radioactive, Top-1. <strong>Bold</strong> = evasion (p&nbsp;≥&nbsp;0.05).
+        Table 3: LLaMA-3.2-1B only (paper Table&nbsp;9).
+      </p>
+
+      <div class="table-card">
+        <div class="table-title">
+          Table 1. Auditing performance
+          <span class="table-sub">Non-evasion vs. Logit Laundering on five models. Average p-value: STAMP 0.744, Radioactive 0.978.</span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="text-left" rowspan="2">Model</th>
+                <th colspan="2">STAMP (p↑)</th>
+                <th colspan="2">Radioactive (p↑)</th>
+              </tr>
+              <tr>
+                <th>Non-evasion</th>
+                <th class="th-ours">Ours</th>
+                <th>Non-evasion</th>
+                <th class="th-ours">Ours</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="text-left row-label">LLaMA-3.2-1B</td>
+                <td class="cell-fail">1.78×10<sup>−3</sup></td>
+                <td class="cell-ok">0.748</td>
+                <td class="cell-fail">2.00×10<sup>−4</sup></td>
+                <td class="cell-ok">0.995</td>
+              </tr>
+              <tr>
+                <td class="text-left row-label">LLaMA-3.2-3B</td>
+                <td class="cell-fail">4.08×10<sup>−3</sup></td>
+                <td class="cell-ok">0.891</td>
+                <td class="cell-fail">7.53×10<sup>−3</sup></td>
+                <td class="cell-ok">0.991</td>
+              </tr>
+              <tr>
+                <td class="text-left row-label">Qwen2.5-1.5B</td>
+                <td class="cell-fail">1.25×10<sup>−5</sup></td>
+                <td class="cell-ok">0.412</td>
+                <td class="cell-fail">2.97×10<sup>−6</sup></td>
+                <td class="cell-ok">0.999</td>
+              </tr>
+              <tr>
+                <td class="text-left row-label">Gemma-2-2B</td>
+                <td class="cell-fail">2.62×10<sup>−3</sup></td>
+                <td class="cell-ok">0.706</td>
+                <td class="cell-fail">3.22×10<sup>−4</sup></td>
+                <td class="cell-ok">0.907</td>
+              </tr>
+              <tr>
+                <td class="text-left row-label">StableLM-2-1.6B</td>
+                <td class="cell-fail">1.99×10<sup>−4</sup></td>
+                <td class="cell-ok">0.965</td>
+                <td class="cell-fail">5.95×10<sup>−5</sup></td>
+                <td class="cell-ok">0.998</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="table-card">
+          <div class="table-title">
+            Table 2. MCQ knowledge retention
+            <span class="table-sub">Per-model MCQ accuracy on copyrighted books (LA = LLaMA-3.2, Qw = Qwen2.5, Ge = Gemma-2, SLM = StableLM-2; paper Table 8).</span>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table data-table-dense">
+              <thead>
+                <tr>
+                  <th class="text-left">Method</th>
+                  <th>LA-1B</th>
+                  <th>LA-3B</th>
+                  <th>Qw-1.5B</th>
+                  <th>Ge-2B</th>
+                  <th>SLM-1.6B</th>
+                  <th>Avg</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="text-left">Foundation</td>
+                  <td>31.8%</td><td>64.5%</td><td>71.8%</td><td>56.2%</td><td>35.2%</td>
+                  <td>51.9%</td>
+                </tr>
+                <tr>
+                  <td class="text-left">Non-evasion</td>
+                  <td>73.4%</td><td>82.9%</td><td>79.7%</td><td>83.6%</td><td>59.2%</td>
+                  <td>75.8%</td>
+                </tr>
+                <tr>
+                  <td class="text-left">Rank-Swap (SS)</td>
+                  <td>38.2%</td><td>45.4%</td><td>54.4%</td><td>45.4%</td><td>43.0%</td>
+                  <td>45.3%</td>
+                </tr>
+                <tr class="row-ours">
+                  <td class="text-left">Ours</td>
+                  <td>72.8%</td><td>82.3%</td><td>80.0%</td><td>83.3%</td><td>59.1%</td>
+                  <td>75.5%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+      </div>
+
+      <div class="table-card">
+          <div class="table-title">
+            Table 3. Generation quality
+            <span class="table-sub">Representative results on LLaMA-3.2-1B only (paper Table 9; not averaged over five models).</span>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table data-table-compact">
+              <thead>
+                <tr><th class="text-left">Method</th><th>PPL↓</th><th>MAUVE↑</th><th>Judge↑</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="text-left">Non-evasion</td><td>6.22</td><td>0.178</td><td>83.7</td></tr>
+                <tr><td class="text-left">Rank-Swap (SS)</td><td>36.5</td><td>0.055</td><td>43.9</td></tr>
+                <tr class="row-ours"><td class="text-left">Ours</td><td>5.75</td><td>0.255</td><td>79.9</td></tr>
+              </tbody>
+            </table>
+          </div>
+      </div>
+    </section>
+
+    <section id="code">
+      <h2>Code &amp; Data</h2>
+      <p>
+        Official PyTorch implementation with a unified CLI (<code>logit-laundering</code>).
+        Copyright-protected book corpora from our experiments are <strong>not released</strong>;
+        the full pipeline is public—prepare your own JSON/JSONL and follow the
+        <a href="https://github.com/‼️YOUR_ORG/Logit-Laundering-Public/blob/main/README.md">README</a>
+        (<a href="https://github.com/‼️YOUR_ORG/Logit-Laundering-Public/blob/main/README.zh-CN.md">中文</a>).
+      </p>
+    </section>
+
+    <section id="bibtex">
+      <h2>BibTeX</h2>
+      <pre class="bibtex-block" id="bibtex-content">@inproceedings{hu2026logitlaundering,
+  title={Logit Laundering: Evading Data-Use Auditing in Large Language Models},
+  author={Hu, Ruihan and Luo, Wei and Shang, Yu-Ming and Wang, Jiakai and Zhang, Chuxuan and Li, Mei and Zhang, Xi and Qiu, Meikang},
+  booktitle={Proceedings of the ACM Conference on Computer and Communications Security (CCS)},
+  year={2026}
+}</pre>
+      <button class="copy-btn" type="button" onclick="copyBibtex()">Copy</button>
+    </section>
+
+  </main>
+
+  <footer>
+    <p class="venue-footer">ACM CCS 2026</p>
+    <p>Logit Laundering &copy; 2026 · For research on robust data-use auditing only.</p>
+  </footer>
+
+</div>
+
+<script>
+function copyBibtex() {
+  const text = document.getElementById('bibtex-content').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+  });
+}
+</script>
+
+</body>
+</html>

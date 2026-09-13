@@ -1,0 +1,26 @@
+{
+  "authorized_wm_corpus_llama": {
+    "file_name": "authorized_wm_corpus.jsonl",
+    "columns": {
+      "prompt": "text"
+    }
+  },
+  "authorized_wm_corpus_qwen": {
+    "file_name": "authorized_wm_corpus_qwen.jsonl",
+    "columns": {
+      "prompt": "text"
+    }
+  },
+  "authorized_wm_corpus_gemma": {
+    "file_name": "authorized_wm_corpus_gemma.jsonl",
+    "columns": {
+      "prompt": "text"
+    }
+  },
+  "authorized_wm_corpus_stablelm": {
+    "file_name": "authorized_wm_corpus_stablelm.jsonl",
+    "columns": {
+      "prompt": "text"
+    }
+  }
+}

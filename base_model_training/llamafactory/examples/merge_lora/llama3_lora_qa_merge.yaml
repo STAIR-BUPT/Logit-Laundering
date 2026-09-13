@@ -1,0 +1,11 @@
+### model
+model_name_or_path: ${OUTPUT_MODEL_ROOT}/Llama-3.2-1B-Instruct_pt
+adapter_name_or_path: ${OUTPUT_MODEL_ROOT}/Llama-3.2-1B-Instruct_pt_lora_sft
+template: llama3
+trust_remote_code: true
+
+### export
+export_dir: ${OUTPUT_MODEL_ROOT}/Llama-3.2-1B-Instruct_pt_lora_sft_merged
+export_size: 5
+export_device: cpu
+export_legacy_format: false

@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "logit-laundering"
+version = "0.1.0"
+description = "Reproduction workflow for Logit Laundering experiments."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Logit Laundering Authors" }
+]
+dependencies = []
+
+[project.scripts]
+logit-laundering = "logit_laundering.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

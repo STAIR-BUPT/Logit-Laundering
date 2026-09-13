@@ -1,0 +1,775 @@
+diff --git a/data/dataset_info.json b/data/dataset_info.json
+index 3615952..09385ce 100644
+--- a/data/dataset_info.json
++++ b/data/dataset_info.json
+@@ -730,5 +730,29 @@
+       "prompt": "content"
+     },
+     "folder": "python"
++  },
++  "authorized_wm_corpus_llama": {
++    "file_name": "authorized_wm_corpus.jsonl",
++    "columns": {
++      "prompt": "text"
++    }
++  },
++  "authorized_wm_corpus_qwen": {
++    "file_name": "authorized_wm_corpus_qwen.jsonl",
++    "columns": {
++      "prompt": "text"
++    }
++  },
++  "authorized_wm_corpus_gemma": {
++    "file_name": "authorized_wm_corpus_gemma.jsonl",
++    "columns": {
++      "prompt": "text"
++    }
++  },
++  "authorized_wm_corpus_stablelm": {
++    "file_name": "authorized_wm_corpus_stablelm.jsonl",
++    "columns": {
++      "prompt": "text"
++    }
+   }
+ }
+diff --git a/src/llamafactory/data/converter.py b/src/llamafactory/data/converter.py
+index ac3735e..2bbccb4 100644
+--- a/src/llamafactory/data/converter.py
++++ b/src/llamafactory/data/converter.py
+@@ -76,14 +76,14 @@ class DatasetConverter:
+         return medias
+ 
+     @abstractmethod
+-    def __call__(self, example: dict[str, Any]) -> dict[str, Any]:
++    def __call__(self, example: dict[str, Any], *args) -> dict[str, Any]:
+         r"""Convert a single example in the dataset to the standard format."""
+         ...
+ 
+ 
+ @dataclass
+ class AlpacaDatasetConverter(DatasetConverter):
+-    def __call__(self, example: dict[str, Any]) -> dict[str, Any]:
++    def __call__(self, example: dict[str, Any], *args) -> dict[str, Any]:
+         prompt = []
+         if self.dataset_attr.history and isinstance(example[self.dataset_attr.history], list):
+             for old_prompt, old_response in example[self.dataset_attr.history]:
+@@ -133,7 +133,7 @@ class AlpacaDatasetConverter(DatasetConverter):
+ 
+ @dataclass
+ class SharegptDatasetConverter(DatasetConverter):
+-    def __call__(self, example: dict[str, Any]) -> dict[str, Any]:
++    def __call__(self, example: dict[str, Any], *args) -> dict[str, Any]:
+         tag_mapping = {
+             self.dataset_attr.user_tag: Role.USER.value,
+             self.dataset_attr.assistant_tag: Role.ASSISTANT.value,
+@@ -229,7 +229,7 @@ class SharegptDatasetConverter(DatasetConverter):
+ 
+ @dataclass
+ class OpenAIDatasetConverter(DatasetConverter):
+-    def __call__(self, example: dict[str, Any]) -> dict[str, Any]:
++    def __call__(self, example: dict[str, Any], *args) -> dict[str, Any]:
+         tag_mapping = {
+             self.dataset_attr.user_tag: Role.USER.value,
+             self.dataset_attr.assistant_tag: Role.ASSISTANT.value,
+@@ -406,6 +406,7 @@ def align_dataset(
+     _images: []
+     _videos: []
+     _audios: []
++    _sample_index: int  # sample index used for train/retain split
+     """
+     column_names = list(next(iter(dataset)).keys())
+     kwargs = {}
+@@ -416,10 +417,17 @@ def align_dataset(
+             desc="Converting format of dataset",
+         )
+ 
++    # Wrap the converter to inject the _sample_index field
++    def converter_with_index(example: dict[str, Any], index: int, *args) -> dict[str, Any]:
++        converted = dataset_converter(example, *args)
++        converted["_sample_index"] = index
++        return converted
++
+     dataset_converter = get_dataset_converter(dataset_attr.formatting, dataset_attr, data_args)
+     return dataset.map(
+-        dataset_converter,
++        converter_with_index,
+         batched=False,
++        with_indices=True,
+         remove_columns=column_names,
+         **kwargs,
+     )
+diff --git a/src/llamafactory/data/loader.py b/src/llamafactory/data/loader.py
+index b5adc13..631ace2 100644
+--- a/src/llamafactory/data/loader.py
++++ b/src/llamafactory/data/loader.py
+@@ -253,11 +253,14 @@ def _get_preprocessed_dataset(
+             desc="Running tokenizer on dataset",
+         )
+ 
++    # Keep the _sample_index field for train/retain split
++    columns_to_remove = [col for col in column_names if col != "_sample_index"]
++    
+     dataset = dataset.map(
+         dataset_processor.preprocess_dataset,
+         batched=True,
+         batch_size=data_args.preprocessing_batch_size,
+-        remove_columns=column_names,
++        remove_columns=columns_to_remove,
+         **kwargs,
+     )
+ 
+diff --git a/src/llamafactory/data/processor/feedback.py b/src/llamafactory/data/processor/feedback.py
+index 871615b..7a16c6c 100644
+--- a/src/llamafactory/data/processor/feedback.py
++++ b/src/llamafactory/data/processor/feedback.py
+@@ -113,6 +113,10 @@ class FeedbackDatasetProcessor(DatasetProcessor):
+             model_inputs["images"].append(examples["_images"][i])
+             model_inputs["videos"].append(examples["_videos"][i])
+             model_inputs["audios"].append(examples["_audios"][i])
++            
++            # Keep _sample_index field for train/retain split
++            if "_sample_index" in examples:
++                model_inputs["_sample_index"].append(examples["_sample_index"][i])
+ 
+         desirable_num = sum([1 for tag in model_inputs["kto_tags"] if tag])
+         undesirable_num = len(model_inputs["kto_tags"]) - desirable_num
+diff --git a/src/llamafactory/data/processor/pairwise.py b/src/llamafactory/data/processor/pairwise.py
+index 94101de..63a2395 100644
+--- a/src/llamafactory/data/processor/pairwise.py
++++ b/src/llamafactory/data/processor/pairwise.py
+@@ -96,6 +96,10 @@ class PairwiseDatasetProcessor(DatasetProcessor):
+             model_inputs["images"].append(examples["_images"][i])
+             model_inputs["videos"].append(examples["_videos"][i])
+             model_inputs["audios"].append(examples["_audios"][i])
++            
++            # Keep _sample_index field for train/retain split
++            if "_sample_index" in examples:
++                model_inputs["_sample_index"].append(examples["_sample_index"][i])
+ 
+         return model_inputs
+ 
+diff --git a/src/llamafactory/data/processor/pretrain.py b/src/llamafactory/data/processor/pretrain.py
+index 3fa6b1c..bd7829c 100644
+--- a/src/llamafactory/data/processor/pretrain.py
++++ b/src/llamafactory/data/processor/pretrain.py
+@@ -50,6 +50,10 @@ class PretrainDatasetProcessor(DatasetProcessor):
+                 for i in range(len(result["input_ids"])):
+                     result["input_ids"][i][0] = self.tokenizer.bos_token_id
+ 
++        # Keep sample index for train/retain split
++        if "_sample_index" in examples:
++            result["_sample_index"] = examples["_sample_index"]
++
+         return result
+ 
+     def print_data_example(self, example: dict[str, list[int]]) -> None:
+diff --git a/src/llamafactory/data/processor/supervised.py b/src/llamafactory/data/processor/supervised.py
+index b5aba11..9e820a4 100644
+--- a/src/llamafactory/data/processor/supervised.py
++++ b/src/llamafactory/data/processor/supervised.py
+@@ -111,6 +111,10 @@ class SupervisedDatasetProcessor(DatasetProcessor):
+             model_inputs["images"].append(examples["_images"][i])
+             model_inputs["videos"].append(examples["_videos"][i])
+             model_inputs["audios"].append(examples["_audios"][i])
++            
++            # Keep _sample_index field for train/retain split
++            if "_sample_index" in examples:
++                model_inputs["_sample_index"].append(examples["_sample_index"][i])
+ 
+         return model_inputs
+ 
+diff --git a/src/llamafactory/data/processor/unsupervised.py b/src/llamafactory/data/processor/unsupervised.py
+index 256174b..7badc08 100644
+--- a/src/llamafactory/data/processor/unsupervised.py
++++ b/src/llamafactory/data/processor/unsupervised.py
+@@ -81,6 +81,10 @@ class UnsupervisedDatasetProcessor(DatasetProcessor):
+             model_inputs["images"].append(examples["_images"][i])
+             model_inputs["videos"].append(examples["_videos"][i])
+             model_inputs["audios"].append(examples["_audios"][i])
++            
++            # Keep _sample_index field for train/retain split
++            if "_sample_index" in examples:
++                model_inputs["_sample_index"].append(examples["_sample_index"][i])
+ 
+         return model_inputs
+ 
+diff --git a/src/llamafactory/train/pt/assistant_loss.py b/src/llamafactory/train/pt/assistant_loss.py
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/src/llamafactory/train/pt/assistant_loss.py
+@@ -0,0 +1,190 @@
++# assistant_loss.py
++# Copyright 2025 the LlamaFactory team.
++
++import torch
++import torch.nn as nn
++import torch.nn.functional as F
++from typing import Dict, Any, Callable, Optional
++
++
++# ============================================================
++# Base loss functions
++# ============================================================
++
++def NextTokenPredictionLoss(model, input_ids, attention_mask, labels, **kwargs):
++    """Standard language modeling loss (cross-entropy)."""
++    outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
++    assert outputs.loss is not None, "NextTokenPredictionLoss: loss is None"
++    return outputs.loss
++
++
++def UniformLossFunc(model, input_ids, attention_mask, labels=None, **kwargs):
++    """Force output distribution toward uniform (used for Evasion-free Set constraint)."""
++    outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
++    logits = outputs.logits
++    soft = F.softmax(logits, dim=-1).view(-1, logits.size(-1))
++    uniform = torch.full_like(soft, 1.0 / logits.size(-1))
++    kl = F.kl_div(soft.log(), uniform, reduction='batchmean')
++    return kl
++
++
++def EnhancedUniformLossFunc(model, input_ids, attention_mask, labels=None, entropy_weight=2.0, **kwargs):
++    """Enhanced flat-distribution loss with a stronger uniformity constraint."""
++    outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
++    logits = outputs.logits
++
++    # Reshape to [batch*seq, vocab_size]
++    logits_flat = logits.view(-1, logits.size(-1))
++    probs = F.softmax(logits_flat, dim=-1)
++
++    # 1. Base KL divergence loss: pull toward uniform distribution
++    uniform = torch.full_like(probs, 1.0 / logits.size(-1))
++    kl_loss = F.kl_div(probs.log(), uniform, reduction='batchmean')
++
++    # 2. Variance penalty: penalize variance of the probability distribution (smaller = flatter)
++    prob_mean = probs.mean(dim=-1, keepdim=True)  # ideally 1/vocab_size
++    variance = ((probs - prob_mean) ** 2).mean()
++
++    # Combined loss: KL divergence + variance penalty (both non-negative)
++    total_loss = kl_loss + entropy_weight * variance
++    return total_loss
++
++
++def KLLossFunc(model, input_ids, attention_mask, labels, oracle_model, **kwargs):
++    """KL divergence constraint against the oracle model."""
++    with torch.no_grad():
++        oracle_out = oracle_model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
++        oracle_probs = F.log_softmax(oracle_out.logits, dim=-1)
++    out = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
++    probs = F.log_softmax(out.logits, dim=-1)
++    kl = F.kl_div(probs, oracle_probs, reduction="batchmean", log_target=True)
++    return kl
++
++
++def GradAscentLossFunc(model, input_ids, attention_mask, labels, **kwargs):
++    """Gradient ascent loss (Evasion Set)."""
++    return -NextTokenPredictionLoss(model, input_ids, attention_mask, labels)
++
++
++def GradDescentLossFunc(model, input_ids, attention_mask, labels, **kwargs):
++    """Standard gradient descent loss (Evasion-free Set)."""
++    return NextTokenPredictionLoss(model, input_ids, attention_mask, labels)
++
++
++# ============================================================
++# Utility: split a batch into Evasion / Evasion-free subsets
++# ============================================================
++
++def split_evasion_evasion_free(input_ids, attention_mask, labels=None, evasion_free_labels=None):
++    if evasion_free_labels is None:
++        return ((input_ids, attention_mask, labels), (None, None, None))
++
++    evasion_mask = evasion_free_labels == 0
++    evasion_free_mask = evasion_free_labels == 1
++
++    def select(mask, x):
++        return x[mask] if x is not None else None
++
++    evasion_tuple = (
++        select(evasion_mask, input_ids),
++        select(evasion_mask, attention_mask),
++        select(evasion_mask, labels),
++    )
++    evasion_free_tuple = (
++        select(evasion_free_mask, input_ids),
++        select(evasion_free_mask, attention_mask),
++        select(evasion_free_mask, labels),
++    )
++    return evasion_tuple, evasion_free_tuple
++
++
++# ============================================================
++# Main class: EvasionLoss
++# ============================================================
++
++class EvasionLoss:
++    """
++    General-purpose Evasion Set + Evasion-free Set loss combiner.
++    Example:
++        evasion_loss_func = GradAscentLossFunc
++        evasion_free_loss_func = UniformLossFunc
++        evasion_free_weight = 0.5
++    """
++
++    def __init__(
++        self,
++        evasion_loss_func: Callable,
++        evasion_free_loss_func: Optional[Callable] = None,
++        evasion_free_weight: float = 1.0,
++    ):
++        self.evasion_loss_func = evasion_loss_func
++        self.evasion_free_loss_func = evasion_free_loss_func
++        self.evasion_free_weight = evasion_free_weight
++
++    def __call__(self, model, batch: Dict[str, Any], oracle_model=None) -> Dict[str, torch.Tensor]:
++        input_ids = batch["input_ids"]
++        attention_mask = batch["attention_mask"]
++        labels = batch.get("labels", None)
++        evasion_free_labels = batch.get("evasion_free_labels", None)
++
++        (e_ids, e_mask, e_labels), (ef_ids, ef_mask, ef_labels) = split_evasion_evasion_free(
++            input_ids, attention_mask, labels, evasion_free_labels
++        )
++
++        device = input_ids.device
++
++        # Evasion Set loss
++        if e_ids is not None and e_ids.size(0) > 0:
++            evasion_loss = self.evasion_loss_func(
++                model,
++                input_ids=e_ids,
++                attention_mask=e_mask,
++                labels=e_labels,
++                oracle_model=oracle_model,
++            )
++        else:
++            evasion_loss = torch.tensor(0.0, device=device)
++
++        # Evasion-free Set loss
++        if (
++            self.evasion_free_loss_func is not None
++            and ef_ids is not None
++            and ef_ids.size(0) > 0
++        ):
++            evasion_free_loss = self.evasion_free_loss_func(
++                model,
++                input_ids=ef_ids,
++                attention_mask=ef_mask,
++                labels=ef_labels,
++                oracle_model=oracle_model,
++            )
++        else:
++            evasion_free_loss = torch.tensor(0.0, device=device)
++
++        total_loss = evasion_loss + self.evasion_free_weight * evasion_free_loss
++        return {
++            "loss": total_loss,
++            "evasion_loss": evasion_loss.detach(),
++            "evasion_free_loss": evasion_free_loss.detach(),
++        }
++
++
++# ============================================================
++# Factory: create loss from config
++# ============================================================
++
++def create_evasion_loss(loss_config: Dict[str, Any]) -> EvasionLoss:
++    """Dynamically build an EvasionLoss from string names in config."""
++    def get_func(name):
++        if name is None:
++            return None
++        if name not in globals():
++            raise NotImplementedError(f"Unknown loss: {name}")
++        return globals()[name]
++
++    evasion_func = get_func(loss_config.get("evasion_loss"))
++    evasion_free_func = get_func(loss_config.get("evasion_free_loss"))
++    evasion_free_weight = loss_config.get("evasion_free_weight", 1.0)
++
++    return EvasionLoss(evasion_func, evasion_free_func, evasion_free_weight)
++
+diff --git a/src/llamafactory/train/pt/trainer.py b/src/llamafactory/train/pt/trainer.py
+index dadf496..2e4d13f 100644
+--- a/src/llamafactory/train/pt/trainer.py
++++ b/src/llamafactory/train/pt/trainer.py
+@@ -1,93 +1,311 @@
+-# Copyright 2025 the LlamaFactory team.
+-#
+-# Licensed under the Apache License, Version 2.0 (the "License");
+-# you may not use this file except in compliance with the License.
+-# You may obtain a copy of the License at
+-#
+-#     http://www.apache.org/licenses/LICENSE-2.0
+-#
+-# Unless required by applicable law or agreed to in writing, software
+-# distributed under the License is distributed on an "AS IS" BASIS,
+-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-# See the License for the specific language governing permissions and
+-# limitations under the License.
+-
+-from types import MethodType
+-from typing import TYPE_CHECKING, Optional
++# CustomTrainer for Logit Laundering assistant training.
++# Evasion Set: random-segment training; Evasion-free Set: full-text training.
+ 
++import copy
++import os
++from pathlib import Path
++from typing import TYPE_CHECKING, Dict
++
++import numpy as np
+ import torch
++from torch.utils.data import Sampler
+ from transformers import Trainer
+ from typing_extensions import override
+ 
+-from ...extras.packages import is_transformers_version_greater_than
+-from ..callbacks import SaveProcessorCallback
+-from ..fp8_utils import configure_fp8_environment, verify_fp8_status
+-from ..trainer_utils import create_custom_optimizer, create_custom_scheduler
+-
++from .assistant_loss import (
++    EvasionLoss,
++    GradDescentLossFunc,
++    UniformLossFunc,
++)
+ 
+ if TYPE_CHECKING:
+-    from transformers import ProcessorMixin
+-
+     from ...hparams import FinetuningArguments, ModelArguments
+ 
+ 
++class EvasionSampler(Sampler):
++    """Fixed-ratio sampler over Evasion-free and Evasion index ranges."""
++
++    def __init__(self, dataset, batch_size, evasion_size, evasion_free_ratio_each_batch=0.75, seed=42):
++        self.dataset = dataset
++        self.batch_size = batch_size
++        self.evasion_size = evasion_size
++        self.evasion_free_ratio_each_batch = evasion_free_ratio_each_batch
++        self.seed = seed
++
++        self.evasion_free_per_batch = max(1, int(batch_size * evasion_free_ratio_each_batch))
++        self.evasion_per_batch = batch_size - self.evasion_free_per_batch
++
++        self.total_samples = len(dataset)
++        self.evasion_indices = list(range(min(evasion_size, self.total_samples)))
++        self.evasion_free_indices = list(range(evasion_size, self.total_samples))
++
++        print("EvasionSampler initialized:")
++        print(f"  batch_size={batch_size}")
++        print(
++            f"  evasion_free_ratio={evasion_free_ratio_each_batch:.1%} "
++            f"({self.evasion_free_per_batch}/batch)"
++        )
++        print(
++            f"  evasion_ratio={1 - evasion_free_ratio_each_batch:.1%} "
++            f"({self.evasion_per_batch}/batch)"
++        )
++        print(
++            f"  split: evasion[0, {len(self.evasion_indices)}), "
++            f"evasion_free[{evasion_size}, {self.total_samples})"
++        )
++
++    def __iter__(self):
++        rng = np.random.default_rng(self.seed)
++        num_batches = len(self.dataset) // self.batch_size
++
++        for _ in range(num_batches):
++            batch_indices = []
++
++            if len(self.evasion_free_indices) >= self.evasion_free_per_batch:
++                batch_indices.extend(
++                    rng.choice(self.evasion_free_indices, size=self.evasion_free_per_batch, replace=False)
++                )
++            else:
++                batch_indices.extend(self.evasion_free_indices)
++
++            if len(self.evasion_indices) >= self.evasion_per_batch:
++                batch_indices.extend(
++                    rng.choice(self.evasion_indices, size=self.evasion_per_batch, replace=False)
++                )
++            else:
++                batch_indices.extend(self.evasion_indices)
++
++            rng.shuffle(batch_indices)
++            yield from batch_indices
++
++    def __len__(self):
++        return len(self.dataset)
++
++
++EVASION_CONFIG = dict(
++    # Prefix length of the Evasion Set in the training JSON.
++    # Put the target subset first, then set EVASION_SIZE to that count.
++    evasion_size=int(os.environ.get("EVASION_SIZE", "0")),
++    evasion_free_weight=3,
++    use_custom_sampler=True,
++    evasion_free_ratio_each_batch=0.6,
++    segment_ratio=float(os.environ.get("SEGMENT_RATIO", "0.05")),
++    fix_segment_per_sample=False,
++    segment_suffix=None,
++    verbose_loss=os.environ.get("ASSISTANT_TRAIN_VERBOSE", "0") == "1",
++)
++
++
+ class CustomTrainer(Trainer):
+-    r"""Inherit Trainer for custom optimizer."""
+-
+-    def __init__(
+-        self,
+-        finetuning_args: "FinetuningArguments",
+-        processor: Optional["ProcessorMixin"],
+-        model_args: Optional["ModelArguments"] = None,
+-        **kwargs,
+-    ) -> None:
+-        # Configure FP8 environment if enabled
+-        if model_args is not None and model_args.fp8:
+-            configure_fp8_environment(model_args)
+-        if is_transformers_version_greater_than("4.46"):
+-            kwargs["processing_class"] = kwargs.pop("tokenizer")
++    """Trainer for the Logit Laundering assistant (Statistical Bias Estimator)."""
+ 
++    def __init__(self, *, evasion_cfg=None, finetuning_args=None, **kwargs):
++        self.processor = kwargs.pop("processor", None)
+         super().__init__(**kwargs)
+-        if processor is not None:
+-            # avoid wrong loss under gradient accumulation
+-            # https://github.com/huggingface/transformers/pull/36044#issuecomment-2746657112
+-            self.model_accepts_loss_kwargs = False
+-
++        self.args.remove_unused_columns = False
+         self.finetuning_args = finetuning_args
++        self.cfg = (evasion_cfg or EVASION_CONFIG).copy()
+ 
+-        if processor is not None:
+-            self.add_callback(SaveProcessorCallback(processor))
++        self.evasion_size = int(self.cfg["evasion_size"])
++        if self.evasion_size <= 0:
++            raise ValueError(
++                "EVASION_SIZE must be a positive integer (prefix length of the Evasion Set). "
++                "Put the target subset first in the training JSON, "
++                "then export EVASION_SIZE=<that count>."
++            )
+ 
+-        if finetuning_args.use_badam:
+-            from badam import BAdamCallback, clip_grad_norm_old_version  # type: ignore
++        self.unlearn_loss_fn = EvasionLoss(
++            evasion_loss_func=GradDescentLossFunc,
++            evasion_free_loss_func=UniformLossFunc,
++            evasion_free_weight=self.cfg["evasion_free_weight"],
++        )
+ 
+-            self.accelerator.clip_grad_norm_ = MethodType(clip_grad_norm_old_version, self.accelerator)
+-            self.add_callback(BAdamCallback)
++        self._step_counter = 0
++        self.segment_ratio = float(self.cfg["segment_ratio"])
++        self.fix_segment_per_sample = bool(self.cfg.get("fix_segment_per_sample", False))
++        self.segment_suffix = self.cfg.get("segment_suffix", None)
++        self._fixed_segments = {}
++        self._verbose_loss = bool(self.cfg.get("verbose_loss", False))
+ 
+-        # Verify FP8 status after trainer initialization (accelerator should be available)
+-        if model_args is not None and model_args.fp8 and hasattr(self, "accelerator"):
+-            verify_fp8_status(self.accelerator, model_args)
++        self._suffix_token_ids = None
++        if self.segment_suffix is not None:
++            try:
++                tokenizer = getattr(self, "tokenizer", None)
++                if tokenizer is None:
++                    raise ValueError("Tokenizer not available")
++                self._suffix_token_ids = tokenizer.encode(self.segment_suffix, add_special_tokens=False)
++                print(f"Segment suffix set: {self.segment_suffix!r} ({len(self._suffix_token_ids)} tokens)")
++            except Exception as exc:
++                print(f"Warning: failed to encode segment suffix ({exc}); suffix disabled")
++                self._suffix_token_ids = None
+ 
+-    @override
+-    def create_optimizer(self) -> "torch.optim.Optimizer":
+-        if self.optimizer is None:
+-            self.optimizer = create_custom_optimizer(self.model, self.args, self.finetuning_args)
+-        return super().create_optimizer()
++        print("Assistant training config:")
++        print("  goal: evasion-free ≈ base; evasion segments amplify logit bias")
++        print(
++            f"  sampling: evasion_free={self.cfg['evasion_free_ratio_each_batch']:.1%} "
++            f"evasion={1 - self.cfg['evasion_free_ratio_each_batch']:.1%}"
++        )
++        print(f"  segment_ratio={self.segment_ratio:.1%}")
++        print(f"  evasion_size={self.evasion_size}")
++        print(
++            "  segment_mode="
++            + ("fixed" if self.fix_segment_per_sample else "resampled")
++        )
+ 
+     @override
+-    def create_scheduler(
+-        self, num_training_steps: int, optimizer: Optional["torch.optim.Optimizer"] = None
+-    ) -> "torch.optim.lr_scheduler.LRScheduler":
+-        create_custom_scheduler(self.args, num_training_steps, optimizer)
+-        return super().create_scheduler(num_training_steps, optimizer)
++    def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
++        sample_indices = inputs.get("_sample_index", None)
++        if sample_indices is None:
++            return super().compute_loss(model, inputs, return_outputs, **kwargs)
+ 
+-    @override
+-    def _get_train_sampler(self, *args, **kwargs) -> Optional["torch.utils.data.Sampler"]:
+-        if self.finetuning_args.disable_shuffling:
+-            return torch.utils.data.SequentialSampler(self.train_dataset)
++        sample_indices = torch.tensor(sample_indices, device=model.device)
++        total = len(self.train_dataset) if self.train_dataset is not None else 0
++        evasion_n = min(self.evasion_size, total)
++
++        evasion_free_mask = sample_indices >= evasion_n
++        evasion_mask = sample_indices < evasion_n
++
++        def _slice(d: Dict[str, torch.Tensor], mask: torch.Tensor) -> Dict[str, torch.Tensor]:
++            out = {}
++            for key, value in d.items():
++                if key == "_sample_index":
++                    continue
++                if isinstance(value, torch.Tensor) and value.size(0) == mask.size(0):
++                    out[key] = value[mask]
++            return out
++
++        evasion_free_inputs = _slice(inputs, evasion_free_mask)
++        evasion_inputs = _slice(inputs, evasion_mask)
++
++        self._step_counter += 1
++        evasion_indices = sample_indices[evasion_mask].tolist()
++
++        evasion_free_loss = (
++            self.unlearn_loss_fn.evasion_free_loss_func(
++                model,
++                input_ids=evasion_free_inputs.get("input_ids"),
++                attention_mask=evasion_free_inputs.get("attention_mask"),
++                labels=evasion_free_inputs.get("labels"),
++            )
++            if evasion_free_mask.any()
++            else torch.tensor(0.0, device=model.device)
++        )
++
++        if evasion_mask.any():
++            evasion_inputs_modified = self._mask_random_segment(evasion_inputs, sample_indices=evasion_indices)
++            evasion_loss = self.unlearn_loss_fn.evasion_loss_func(
++                model,
++                input_ids=evasion_inputs_modified.get("input_ids"),
++                attention_mask=evasion_inputs_modified.get("attention_mask"),
++                labels=evasion_inputs_modified.get("labels"),
++            )
++        else:
++            evasion_loss = torch.tensor(0.0, device=model.device)
++
++        total_loss = evasion_loss + self.unlearn_loss_fn.evasion_free_weight * evasion_free_loss
++
++        if self._verbose_loss:
++            print(
++                f"[step] evasion_free={evasion_free_loss.item():.4f} "
++                f"(w={self.unlearn_loss_fn.evasion_free_weight}) "
++                f"evasion={evasion_loss.item():.4f} total={total_loss.item():.4f}"
++            )
++
++        if return_outputs:
++            outputs = model(**inputs)
++            return total_loss, outputs
++        return total_loss
++
++    def _mask_random_segment(self, inputs, sample_indices=None):
++        """Keep labels on one random segment per sample; mask the rest to -100."""
++        segment_ratio = self.segment_ratio
++        inputs_modified = copy.deepcopy(inputs)
++        labels = inputs_modified["labels"]
++        batch_size = labels.size(0)
++        seq_len = labels.size(1)
++
++        for i in range(batch_size):
++            valid_positions = torch.where(labels[i] != -100)[0]
++            if len(valid_positions) == 0:
++                continue
++
++            valid_len = len(valid_positions)
++            segment_len = max(1, int(valid_len * segment_ratio))
++            is_fixed_segment = False
++
++            if self.fix_segment_per_sample and sample_indices is not None:
++                sample_idx = sample_indices[i]
++                segment_key = (sample_idx, valid_len)
++                if segment_key in self._fixed_segments:
++                    segment_start, segment_end = self._fixed_segments[segment_key]
++                    segment_start = max(segment_start, valid_positions[0].item())
++                    segment_end = min(segment_end, valid_positions[-1].item() + 1)
++                    is_fixed_segment = True
++                else:
++                    max_start = valid_len - segment_len
++                    start_idx = 0 if max_start <= 0 else torch.randint(0, max_start + 1, (1,)).item()
++                    segment_start = valid_positions[start_idx].item()
++                    segment_end = valid_positions[min(start_idx + segment_len - 1, valid_len - 1)].item() + 1
++                    self._fixed_segments[segment_key] = (segment_start, segment_end)
++            else:
++                max_start = valid_len - segment_len
++                start_idx = 0 if max_start <= 0 else torch.randint(0, max_start + 1, (1,)).item()
++                segment_start = valid_positions[start_idx].item()
++                segment_end = valid_positions[min(start_idx + segment_len - 1, valid_len - 1)].item() + 1
++
++            if self._suffix_token_ids and len(self._suffix_token_ids) > 0:
++                suffix_len = len(self._suffix_token_ids)
++                if segment_end + suffix_len <= seq_len:
++                    suffix_end = segment_end + suffix_len
++                    input_ids = inputs_modified["input_ids"][i]
++                    suffix_tokens = torch.tensor(
++                        self._suffix_token_ids, device=input_ids.device, dtype=input_ids.dtype
++                    )
++                    input_ids[segment_end:suffix_end] = suffix_tokens
++                    inputs_modified["input_ids"][i] = input_ids
++                    new_labels = torch.full_like(labels[i], -100)
++                    new_labels[segment_start:segment_end] = labels[i][segment_start:segment_end]
++                    inputs_modified["labels"][i] = new_labels
++                    actual_segment_end = suffix_end
++                else:
++                    new_labels = torch.full_like(labels[i], -100)
++                    new_labels[segment_start:segment_end] = labels[i][segment_start:segment_end]
++                    inputs_modified["labels"][i] = new_labels
++                    actual_segment_end = segment_end
++            else:
++                new_labels = torch.full_like(labels[i], -100)
++                new_labels[segment_start:segment_end] = labels[i][segment_start:segment_end]
++                inputs_modified["labels"][i] = new_labels
++                actual_segment_end = segment_end
++
++            if self._verbose_loss and i == 0:
++                mode_str = "fixed" if is_fixed_segment else "random"
++                print(
++                    f"  segment[{mode_str}] sample={i} "
++                    f"valid_len={valid_len} span={segment_start}:{segment_end} "
++                    f"end_with_suffix={actual_segment_end}"
++                )
+ 
+-        return super()._get_train_sampler(*args, **kwargs)
++        return inputs_modified
+ 
+     @override
+-    def compute_loss(self, model, inputs, *args, **kwargs):
+-        return super().compute_loss(model, inputs, *args, **kwargs)
++    def get_train_dataloader(self):
++        if self.cfg.get("use_custom_sampler", False):
++            batch_size = self.args.per_device_train_batch_size
++            sampler = EvasionSampler(
++                dataset=self.train_dataset,
++                batch_size=batch_size,
++                evasion_size=self.evasion_size,
++                evasion_free_ratio_each_batch=self.cfg["evasion_free_ratio_each_batch"],
++                seed=42,
++            )
++            return torch.utils.data.DataLoader(
++                self.train_dataset,
++                batch_size=batch_size,
++                sampler=sampler,
++                drop_last=self.args.dataloader_drop_last,
++                collate_fn=self.data_collator,
++                num_workers=self.args.dataloader_num_workers,
++                pin_memory=self.args.dataloader_pin_memory,
++            )
++        return super().get_train_dataloader()

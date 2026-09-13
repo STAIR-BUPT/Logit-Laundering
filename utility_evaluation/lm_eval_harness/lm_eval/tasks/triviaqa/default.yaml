@@ -1,0 +1,33 @@
+task: triviaqa
+dataset_path: trivia_qa
+dataset_name: rc.nocontext
+dataset_kwargs:
+  data_dir: ${HF_DATASETS_CACHE_DIR}/mandarjoshi___trivia_qa/rc.nocontext/0.0.0/0f7faf33a3908546c6fd5b73a660e0f8ff173c2f
+output_type: generate_until
+training_split: train
+validation_split: validation
+doc_to_text: "Question: {{question}}?\nAnswer:"
+doc_to_target: "{{answer.aliases}}"
+should_decontaminate: true
+doc_to_decontamination_query: question
+generation_kwargs:
+  until:
+    - "\n"
+    - "."
+    - ","
+  do_sample: false
+  temperature: 0.0
+filter_list:
+  - name: remove_whitespace
+    filter:
+      - function: remove_whitespace
+      - function: take_first
+target_delimiter: " "
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+metadata:
+  version: 3.0

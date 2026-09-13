@@ -1,0 +1,452 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
+:root {
+  --text: #2a2a2a;
+  --heading: #111;
+  --muted: #5c5c5c;
+  --aff1: #c45c26;
+  --aff2: #2563eb;
+  --aff3: #7c3aed;
+  --accent: #1d4ed8;
+  --border: #e2e4e8;
+  --page-bg: #f8f8f9;
+  --surface: #fff;
+
+  /* 版面：略窄于 900px，正文行宽更舒服 */
+  --max-width: 820px;
+
+  /* 字号阶梯（px 基准 16） */
+  --fs-body: 1.0625rem;   /* 17px */
+  --fs-lead: 1.125rem;    /* 18px */
+  --fs-small: 0.9375rem;  /* 15px */
+  --fs-caption: 0.9375rem;
+  --fs-table: 0.9375rem;
+  --fs-table-dense: 0.875rem; /* 14px，宽表专用 */
+  --lh-body: 1.75;
+  --lh-tight: 1.45;
+
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1.25rem;
+  --space-lg: 2rem;
+  --space-xl: 2.75rem;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'DM Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text);
+  background: var(--page-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.page {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 3.5rem;
+  overflow-x: hidden;
+}
+
+/* ── Hero ── */
+.hero {
+  margin-bottom: var(--space-xl);
+}
+
+.hero-meta {
+  text-align: center;
+  margin-bottom: var(--space-lg);
+}
+
+.hero h1 {
+  font-size: clamp(1.625rem, 3.2vw, 2.125rem);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--heading);
+  margin: 0 0 var(--space-md);
+  letter-spacing: -0.01em;
+}
+
+.title-emoji {
+  display: inline-block;
+  margin-right: 0.1em;
+  vertical-align: -0.04em;
+}
+
+.authors {
+  font-size: var(--fs-body);
+  margin: 0 0 var(--space-sm);
+  line-height: 1.8;
+}
+
+.author { font-weight: 500; }
+.author.aff1 { color: var(--aff1); }
+.author.aff2 { color: var(--aff2); }
+.author.aff3 { color: var(--aff3); }
+.authors sup { font-size: 0.7em; color: var(--muted); }
+
+.affiliations {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  margin-bottom: var(--space-md);
+}
+
+.aff-row {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.aff-eq { margin-top: 0.4rem; }
+.aff-eq a { font-weight: 500; }
+
+.aff-marker { font-size: 0.65rem; margin-right: 0.25rem; }
+.aff-marker.aff1 { color: var(--aff1); }
+.aff-marker.aff2 { color: var(--aff2); }
+.aff-marker.aff3 { color: var(--aff3); }
+
+.hero-buttons {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.hero-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1.15rem;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: #fff !important;
+  background: #1a1a1a;
+  border-radius: 999px;
+  text-decoration: none !important;
+  transition: background 0.15s;
+}
+
+.hero-btn:hover {
+  background: #333;
+}
+
+.pitch {
+  margin: 0 0 var(--space-md);
+  font-size: var(--fs-lead);
+  line-height: var(--lh-body);
+  color: var(--text);
+}
+
+.pitch:last-of-type {
+  margin-bottom: var(--space-lg);
+}
+
+.pitch strong { color: var(--heading); font-weight: 600; }
+
+/* ── Figures：随栏宽缩放，不再硬塞小框 ── */
+.content-figure,
+.hero-figure,
+.paper-figure {
+  margin: var(--space-md) 0 var(--space-lg);
+  padding: 0;
+  max-width: 100%;
+}
+
+.figure-frame {
+  width: 100%;
+  padding: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  line-height: 0;
+}
+
+.figure-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0;
+  border: none;
+  border-radius: 2px;
+}
+
+.content-figure figcaption,
+.hero-figure figcaption,
+.paper-figure figcaption {
+  margin-top: var(--space-sm);
+  font-size: var(--fs-caption);
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.content-figure figcaption strong,
+.hero-figure figcaption strong,
+.paper-figure figcaption strong {
+  color: var(--heading);
+  font-weight: 600;
+}
+
+.hero .content-figure {
+  margin-top: 0;
+}
+
+.hero-contrib {
+  margin: var(--space-lg) 0 0;
+  text-align: left;
+}
+
+/* ── Sections ── */
+main section {
+  margin-bottom: var(--space-xl);
+}
+
+main h2 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--heading);
+  margin: 0 0 var(--space-md);
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+  letter-spacing: -0.01em;
+}
+
+main p {
+  margin: 0 0 var(--space-md);
+}
+
+main p:last-child {
+  margin-bottom: 0;
+}
+
+.contrib, .steps {
+  margin: var(--space-md) 0 0;
+  padding-left: 1.35rem;
+}
+
+.contrib li, .steps li {
+  margin-bottom: 0.65rem;
+  padding-left: 0.15rem;
+}
+
+.contrib li strong,
+.steps li strong {
+  color: var(--heading);
+}
+
+.formula {
+  text-align: center;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 1.0625rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 0.85rem 1rem;
+  margin: var(--space-md) 0;
+  border-radius: 6px;
+}
+
+/* ── Tables (booktabs) ── */
+.table-card {
+  margin: var(--space-lg) 0;
+}
+
+.table-card:first-of-type {
+  margin-top: var(--space-md);
+}
+
+.table-title {
+  padding: 0 0 0.5rem;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--heading);
+  line-height: var(--lh-tight);
+}
+
+.table-sub {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: var(--fs-small);
+  font-weight: 400;
+  font-style: italic;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  margin: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-size: var(--fs-table);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.5rem 0.65rem;
+  border: none;
+  text-align: center;
+  vertical-align: middle;
+  background: transparent !important;
+  color: var(--text);
+}
+
+.data-table thead th {
+  font-weight: 600;
+  font-size: var(--fs-small);
+  color: var(--heading);
+}
+
+.data-table thead tr:first-child th {
+  border-top: 2px solid #111;
+  padding-top: 0.6rem;
+}
+
+.data-table thead tr:last-child th {
+  border-bottom: 1px solid #111;
+  padding-bottom: 0.55rem;
+}
+
+.data-table thead tr:only-child th {
+  border-top: 2px solid #111;
+  border-bottom: 1px solid #111;
+  padding-top: 0.6rem;
+  padding-bottom: 0.55rem;
+}
+
+.data-table tbody td {
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: 2px solid #111;
+  padding-bottom: 0.6rem;
+}
+
+.data-table .th-ours {
+  color: var(--heading);
+  font-weight: 700;
+}
+
+.data-table .text-left { text-align: left; }
+
+.data-table .row-label {
+  font-weight: 500;
+  color: var(--heading);
+  white-space: nowrap;
+}
+
+.data-table .cell-ok {
+  color: var(--heading);
+  font-weight: 700;
+}
+
+.data-table tr.row-ours td {
+  font-weight: 700;
+  color: var(--heading);
+}
+
+/* 多列表格略缩小字号，避免挤成一团 */
+.data-table-dense {
+  font-size: var(--fs-table-dense);
+  min-width: 36rem;
+}
+
+.data-table-dense thead th,
+.data-table-dense td {
+  padding-left: 0.45rem;
+  padding-right: 0.45rem;
+}
+
+.data-table-compact {
+  width: auto;
+  min-width: 18rem;
+}
+
+/* ── BibTeX ── */
+.bibtex-block {
+  display: block;
+  margin: 0;
+  padding: 1rem 1.15rem;
+  background: #111;
+  color: #e8eaed;
+  border-radius: 6px;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  overflow-x: auto;
+  white-space: pre;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+.copy-btn {
+  margin-top: var(--space-sm);
+  padding: 0.45rem 1rem;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: #fff;
+  background: #1a1a1a;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.copy-btn:hover { background: #333; }
+
+/* ── Footer ── */
+footer {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: var(--fs-small);
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+footer p { margin: 0.4rem 0; }
+
+.venue-footer {
+  font-weight: 600;
+  color: var(--heading);
+}
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+  .page {
+    padding: 1.75rem 1rem 2.5rem;
+  }
+
+  .hero h1 {
+    font-size: 1.45rem;
+  }
+
+  .pitch {
+    font-size: var(--fs-body);
+  }
+
+  .authors {
+    font-size: var(--fs-small);
+  }
+
+  main h2 {
+    font-size: 1.25rem;
+  }
+}
