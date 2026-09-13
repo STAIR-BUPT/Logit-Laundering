@@ -4,8 +4,6 @@ This repository provides the official implementation of [Logit Laundering: Evadi
 
 [Project Page](docs/index.html) | [Paper](‼️PAPER_URL) | [中文](README.zh-CN.md)
 
-> ‼️ Before publishing: replace `‼️PUBLIC_REPOSITORY_URL` below and `‼️PAPER_URL` / `‼️YOUR_ORG` in [`docs/index.html`](docs/index.html).
-
 ## Overview
 
 We study the **data-use auditing** problem in LLMs: given black-box access to a model, can an auditor determine whether the provider trained on watermarked, unauthorized data?
@@ -55,8 +53,7 @@ Our codebase reproduces the paper on **five foundation models**:
 #### Installation
 
 ```bash
-# ‼️ PUBLIC_REPOSITORY_URL
-git clone <PUBLIC_REPOSITORY_URL> REPO && cd REPO
+git clone https://github.com/STAIR-BUPT/Logit-Laundering.git REPO && cd REPO
 
 python -m venv .venv && source .venv/bin/activate
 pip install -U pip && pip install -r env/requirements.txt

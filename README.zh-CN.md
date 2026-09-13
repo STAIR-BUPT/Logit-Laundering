@@ -4,8 +4,6 @@
 
 [项目主页](docs/index.html) | [Paper](‼️PAPER_URL) | [English](README.md)
 
-> ‼️ 公开前请替换：下文 `‼️PUBLIC_REPOSITORY_URL`，以及 [`docs/index.html`](docs/index.html) 中的 `‼️PAPER_URL` / `‼️YOUR_ORG`。
-
 ## Overview
 
 我们研究 LLM 中的 **data-use auditing** 问题：在只能黑盒访问模型的前提下，审计方能否判定提供方在未经授权、带水印的数据上训练？
@@ -55,8 +53,7 @@ cp configs/experiment.env.example configs/experiment.env
 #### Installation
 
 ```bash
-# ‼️ PUBLIC_REPOSITORY_URL
-git clone <PUBLIC_REPOSITORY_URL> REPO && cd REPO
+git clone https://github.com/STAIR-BUPT/Logit-Laundering.git REPO && cd REPO
 
 python -m venv .venv && source .venv/bin/activate
 pip install -U pip && pip install -r env/requirements.txt
